@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # Redis服务
+  redis:
+    image: redis:7-alpine
+    container_name: douyin-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - douyin-network
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: douyin-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - DOUYIN_CLIENT_ID=${DOUYIN_CLIENT_ID}
+      - DOUYIN_CLIENT_SECRET=${DOUYIN_CLIENT_SECRET}
+      - DOUYIN_REDIRECT_URI=${DOUYIN_REDIRECT_URI}
+      - DOUYIN_API_BASE_URL=${DOUYIN_API_BASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - STABILITY_API_KEY=${STABILITY_API_KEY}
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_db:/app/data
+    depends_on:
+      - redis
+    networks:
+      - douyin-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: douyin-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - douyin-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker (可选，用于异步任务)
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: douyin-celery-worker
+    restart: unless-stopped
+    command: celery -A app.services.celery worker --loglevel=info
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - DOUYIN_CLIENT_ID=${DOUYIN_CLIENT_ID}
+      - DOUYIN_CLIENT_SECRET=${DOUYIN_CLIENT_SECRET}
+      - DOUYIN_REDIRECT_URI=${DOUYIN_REDIRECT_URI}
+      - DOUYIN_API_BASE_URL=${DOUYIN_API_BASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - STABILITY_API_KEY=${STABILITY_API_KEY}
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_db:/app/data
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - douyin-network
+
+  # Celery Beat (可选，用于定时任务)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: douyin-celery-beat
+    restart: unless-stopped
+    command: celery -A app.services.celery beat --loglevel=info
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - DOUYIN_CLIENT_ID=${DOUYIN_CLIENT_ID}
+      - DOUYIN_CLIENT_SECRET=${DOUYIN_CLIENT_SECRET}
+      - DOUYIN_REDIRECT_URI=${DOUYIN_REDIRECT_URI}
+      - DOUYIN_API_BASE_URL=${DOUYIN_API_BASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - STABILITY_API_KEY=${STABILITY_API_KEY}
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_db:/app/data
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - douyin-network
+
+volumes:
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  backend_db:
+    driver: local
+
+networks:
+  douyin-network:
+    driver: bridge
