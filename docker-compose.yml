@@ -16,13 +16,12 @@ services:
 
   # 后端服务
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: python:3.11-slim
     container_name: douyin-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
+    working_dir: /app
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
@@ -39,12 +38,20 @@ services:
       - MAX_FILE_SIZE=${MAX_FILE_SIZE}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
     volumes:
+      - ./backend:/app
       - backend_uploads:/app/uploads
       - backend_db:/app/data
     depends_on:
       - redis
     networks:
       - douyin-network
+    command: >
+      sh -c "
+        apt-get update && 
+        apt-get install -y gcc g++ curl && 
+        pip install -r requirements.txt && 
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -53,31 +60,36 @@ services:
 
   # 前端服务
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: node:18-alpine
     container_name: douyin-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:5173"
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
     networks:
       - douyin-network
+    command: >
+      sh -c "
+        npm install && 
+        npm run dev -- --host 0.0.0.0
+      "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   # Celery Worker (可选，用于异步任务)
   celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: python:3.11-slim
     container_name: douyin-celery-worker
     restart: unless-stopped
-    command: celery -A app.services.celery worker --loglevel=info
+    working_dir: /app
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
@@ -93,6 +105,7 @@ services:
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=${MAX_FILE_SIZE}
     volumes:
+      - ./backend:/app
       - backend_uploads:/app/uploads
       - backend_db:/app/data
     depends_on:
@@ -100,15 +113,20 @@ services:
       - backend
     networks:
       - douyin-network
+    command: >
+      sh -c "
+        apt-get update && 
+        apt-get install -y gcc g++ && 
+        pip install -r requirements.txt && 
+        celery -A app.services.celery worker --loglevel=info
+      "
 
   # Celery Beat (可选，用于定时任务)
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: python:3.11-slim
     container_name: douyin-celery-beat
     restart: unless-stopped
-    command: celery -A app.services.celery beat --loglevel=info
+    working_dir: /app
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
@@ -124,6 +142,7 @@ services:
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=${MAX_FILE_SIZE}
     volumes:
+      - ./backend:/app
       - backend_uploads:/app/uploads
       - backend_db:/app/data
     depends_on:
@@ -131,6 +150,13 @@ services:
       - backend
     networks:
       - douyin-network
+    command: >
+      sh -c "
+        apt-get update && 
+        apt-get install -y gcc g++ && 
+        pip install -r requirements.txt && 
+        celery -A app.services.celery beat --loglevel=info
+      "
 
 volumes:
   redis_data:

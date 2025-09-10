@@ -4,7 +4,10 @@
 
 ### Windows用户
 ```bash
-# 构建并启动（推荐，解决构建问题）
+# 快速修复并启动（推荐，解决所有问题）
+quick-fix.bat
+
+# 或者构建并启动
 build-and-start.bat
 
 # 或者直接启动（如果已构建过）
@@ -16,7 +19,10 @@ start.bat
 # 给脚本添加执行权限
 chmod +x *.sh
 
-# 构建并启动（推荐，解决构建问题）
+# 快速修复并启动（推荐，解决所有问题）
+./quick-fix.sh
+
+# 或者构建并启动
 ./build-and-start.sh
 
 # 或者直接启动（如果已构建过）
@@ -85,11 +91,24 @@ docker-compose up -d
 
 ## 故障排除
 
+### 环境变量解析错误
+如果遇到CORS配置或环境变量解析错误：
+
+```bash
+# 快速修复（推荐）
+./quick-fix.sh  # Linux/Mac
+quick-fix.bat   # Windows
+
+# 或者手动修复CORS配置
+./fix-cors-config.sh  # Linux/Mac
+fix-cors-config.bat   # Windows
+```
+
 ### 构建失败问题
 如果遇到构建失败，特别是前端构建问题：
 
 ```bash
-# 方法1: 测试前端构建（推荐）
+# 方法1: 测试前端构建
 ./test-frontend-build.sh  # Linux/Mac
 test-frontend-build.bat   # Windows
 

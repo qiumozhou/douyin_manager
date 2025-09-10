@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
-from typing import Optional, List
+from typing import Optional, List, Union
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
     
     # CORS配置
-    BACKEND_CORS_ORIGINS: List[str] = [
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:5174", 
@@ -49,6 +50,18 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8000",
         "http://127.0.0.1:8001"
     ]
+    
+    @property
+    def cors_origins(self) -> List[str]:
+        """处理CORS origins，支持字符串和列表格式"""
+        if isinstance(self.BACKEND_CORS_ORIGINS, str):
+            try:
+                # 尝试解析JSON字符串
+                return json.loads(self.BACKEND_CORS_ORIGINS)
+            except json.JSONDecodeError:
+                # 如果不是JSON，按逗号分割
+                return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(',')]
+        return self.BACKEND_CORS_ORIGINS
     
     class Config:
         env_file = ".env"
