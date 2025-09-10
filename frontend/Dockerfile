@@ -7,8 +7,8 @@ WORKDIR /app
 # 复制package文件
 COPY package*.json ./
 
-# 安装所有依赖（包括开发依赖，因为需要构建工具）
-RUN npm ci
+# 删除旧的lock文件并重新安装依赖
+RUN rm -f package-lock.json && npm install
 
 # 复制源代码
 COPY . .
