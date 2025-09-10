@@ -277,3 +277,7 @@ media/
 
 # Project specific
 douyin_manager.db
+
+# Scripts (bat and sh files)
+*.bat
+*.sh

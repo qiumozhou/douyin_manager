@@ -85,6 +85,34 @@ docker-compose up -d
 
 ## 故障排除
 
+### 构建失败问题
+如果遇到构建失败，特别是前端构建问题：
+
+```bash
+# 方法1: 测试前端构建（推荐）
+./test-frontend-build.sh  # Linux/Mac
+test-frontend-build.bat   # Windows
+
+# 方法2: 使用修复脚本
+./fix-build.sh  # Linux/Mac
+fix-build.bat   # Windows
+
+# 方法3: 使用构建并启动脚本
+./build-and-start.sh  # Linux/Mac
+build-and-start.bat   # Windows
+```
+
+### npm依赖版本冲突
+如果遇到package-lock.json版本冲突：
+
+```bash
+# 删除lock文件并重新安装
+cd frontend
+rm package-lock.json  # Linux/Mac
+del package-lock.json  # Windows
+npm install
+```
+
 ### 端口被占用
 修改 `docker-compose.yml` 中的端口映射：
 ```yaml
@@ -104,6 +132,9 @@ sudo chmod -R 755 backend/uploads
 # 查看特定服务日志
 docker-compose logs -f backend
 docker-compose logs -f frontend
+
+# 查看构建日志
+docker-compose build --no-cache
 ```
 
 ## 重要配置

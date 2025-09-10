@@ -75,3 +75,7 @@ env/
 
 # Uploads (will be mounted as volume)
 uploads/
+
+# Scripts
+*.bat
+*.sh

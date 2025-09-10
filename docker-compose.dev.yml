@@ -76,3 +76,4 @@ volumes:
 networks:
   douyin-network:
     driver: bridge
+
